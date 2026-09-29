@@ -1730,16 +1730,33 @@
     const ghBtn = document.getElementById('github-btn');
     if (cvBtn) cvBtn.addEventListener('click', async e => {
       e.preventDefault();
+      cvBtn.style.opacity = '0.5';
+      cvBtn.style.pointerEvents = 'none';
       try {
         const byteChars = atob(CV_B64);
         const byteArr = new Uint8Array(byteChars.length);
         for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
         const blob = new Blob([byteArr], {type: 'application/pdf'});
-        const downloads = await window.claude.use('downloads');
-        if (downloads) {
-          await downloads.save({filename: 'CV_Lee_De_Smedt.pdf', data: blob});
+        if (window.claude && typeof window.claude.use === 'function') {
+          const downloads = await window.claude.use('downloads');
+          if (downloads) {
+            await downloads.save({filename: 'CV_Lee_De_Smedt.pdf', data: blob});
+          } else {
+            showNotice('Download not available in this viewer');
+          }
+        } else {
+          // Outside claude.ai — plain blob download
+          const url = URL.createObjectURL(blob);
+          const a = Object.assign(document.createElement('a'), {href: url, download: 'CV_Lee_De_Smedt.pdf'});
+          document.body.appendChild(a); a.click();
+          setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
         }
-      } catch(err) { console.warn('CV download error', err); }
+      } catch(err) {
+        console.warn('CV download error', err);
+        showNotice('Download failed — try again');
+      } finally {
+        cvBtn.style.opacity = ''; cvBtn.style.pointerEvents = '';
+      }
     });
   })();
 </script>
